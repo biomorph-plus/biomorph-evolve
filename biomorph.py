@@ -27,19 +27,19 @@ from __future__ import division
 import random
 from control import App, Control, Config, DictCache, ListCache, RectCache, Renderer, Color
 
-
 if not hasattr(random, 'randrange'):
-    random.randrange = lambda i,f: random.choice(range(i,f))
-
+    random.randrange = lambda i, f: random.choice(range(i, f))
 
 size = 200
 col = 3
 row = 3
-gene = {'num':9, 'lv':(-9,9), 'ln':(3,9)}
-genome = dict([(i,gene['lv']) for i in range(1,gene['num']+1)])
+gene = {'num': 8, 'lv': (-9, 9), 'ln': (3, 9), 'cl': (0, 256)}
+genome = dict([(i, gene['lv']) for i in range(1, gene['num'] + 1)])
 genome[9] = gene['ln']
+for i in range(10, 13):
+    genome[i] = gene['cl']
 biomorph_color = Color(40, 60, 80)
-screen_color = Color(150,150,150)
+screen_color = Color(150, 150, 150)
 grid_color = Color(0, 20, 40)
 dict_cache = DictCache()
 list_cache = ListCache()
@@ -59,19 +59,20 @@ class Matrix(object):
         self.repeat = False
         self.control = None
         self.size = size
-        self.biomorph_color = biomorph_color
+        # self.biomorph_color = biomorph_color
+        self.color = [0 for _ in range(3)]
         self.screen_color = screen_color
         self.grid_color = grid_color
         self.renderer = Renderer(self)
-        self.pos = [(c*size+(size//2),r*size+(size//2)) for r in range(row) for c in range(col)]
-        self.grid = [(c*size,r*size) for r in range(row) for c in range(col)]
-        self.rect = [rect_cache.get(grid[0],grid[1],size,size) for grid in self.grid]
-        self.renderer.draw_grid(self.grid, (size,size), self.grid_color)
+        self.pos = [(c * size + (size // 2), r * size + (size // 2)) for r in range(row) for c in range(col)]
+        self.grid = [(c * size, r * size) for r in range(row) for c in range(col)]
+        self.rect = [rect_cache.get(grid[0], grid[1], size, size) for grid in self.grid]
+        self.renderer.draw_grid(self.grid, (size, size), self.grid_color)
         self.init()
         self.renderer.update()
 
     def init(self):
-        for i in range((row*col)):
+        for i in range((row * col)):
             self.biomorph.append(Biomorph())
         for i, biomorph in enumerate(self.biomorph):
             self.develop(biomorph)
@@ -87,7 +88,7 @@ class Matrix(object):
         self.biomorph[:] = []
 
     def reproduce(self, biomorph):
-        for i in range((row*col)-1):
+        for i in range((row * col) - 1):
             self.biomorph.append(biomorph.reproduce())
         self.biomorph.insert(4, biomorph)
         return self.biomorph
@@ -96,7 +97,7 @@ class Matrix(object):
         startx = 0
         starty = 0
         startdir = 2
-        biomorph.develop(startx, starty, startdir, self.dx, self.dy)
+        biomorph.develop(startx, starty, startdir, self.dx, self.dy, self.color)
 
     def display(self, biomorph, pos):
         self.renderer.render(biomorph, pos)
@@ -132,7 +133,7 @@ class Matrix(object):
                 self.processing = 0
                 self.biomorph = self.reproduce(self.biomorph_selected)
             else:
-                if self.processing < (row*col):
+                if self.processing < (row * col):
                     biomorph = self.biomorph[self.processing]
                     self.develop(biomorph)
                     self.display(biomorph, self.pos[self.processing])
@@ -156,17 +157,23 @@ class Biomorph(object):
             for i in genes.keys():
                 self.genes[i] = genes[i]
             i = random.choice(list(self.genes.keys()))
-            self.genes[i] += random.choice([-1,1])
+            if i < 9:
+                self.genes[i] += random.choice([-1, 1])
+            else:
+                self.genes[i] += random.randrange(0, 256)
+                self.genes[i] %= 256
             if self.genes[i] < genome[i][0]:
                 self.genes[i] = genome[i][0] + 1
             elif self.genes[i] > genome[i][1]:
                 self.genes[i] = genome[i][1] - 1
         else:
-            for i in range(1,9):
-                self.genes[i] = random.randrange(genome[i][0], genome[i][1]+1)
-            self.genes[9] = random.randrange(genome[i][1]-3, genome[i][1]+1)
+            for i in range(1, 9):
+                self.genes[i] = random.randrange(genome[i][0], genome[i][1] + 1)
+            self.genes[9] = random.randrange(genome[i][1] - 3, genome[i][1] + 1)
+            for i in range(10, 13):
+                self.genes[i] = random.randrange(genome[i][0], genome[i][1])
         self.segments = None
-        self.rect = rect_cache.get(0,0,size,size)
+        self.rect = rect_cache.get(0, 0, size, size)
         self.dim = size
 
     def deinit(self):
@@ -177,21 +184,27 @@ class Biomorph(object):
     def reproduce(self):
         return Biomorph(self.genes)
 
-    def develop(self, startx, starty, startdir, dx, dy):
+    def develop(self, startx, starty, startdir, dx, dy, color):
         self.segments = Segment()
-        order, dx, dy = self.plugin(self.genes, dx, dy)
-        self.tree(startx, starty, order, startdir, dx, dy)
+        order, dx, dy, color = self.plugin(self.genes, dx, dy, color)
+        self.tree(startx, starty, order, startdir, dx, dy, color)
 
-    def tree(self, x, y, length, dir, dx, dy):
-        _dir = dir%8
+    def tree(self, x, y, length, dir, dx, dy, color):
+        _dir = dir % 8
         xnew = x + length * dx[_dir]
         ynew = y + length * dy[_dir]
-        self.segments.add(x, y, xnew, ynew)
+        self.segments.add(x, y, xnew, ynew, color)
         if length > 0:
-            self.tree(xnew, ynew, length-1, _dir-1, dx, dy)
-            self.tree(xnew, ynew, length-1, _dir+1, dx, dy)
+            self.tree(xnew, ynew, length - 1, _dir - 1, dx, dy, self.rotate_color(color, True))
+            self.tree(xnew, ynew, length - 1, _dir + 1, dx, dy, self.rotate_color(color, False))
 
-    def plugin(self, gene, dx, dy):
+    def rotate_color(self, color, sense):
+        if sense:
+            return [color[2], color[0], color[1]]
+        else:
+            return [color[1], color[2], color[0]]
+
+    def plugin(self, gene, dx, dy, color):
         order = gene[9]
         dx[3] = gene[1]
         dx[4] = gene[2]
@@ -209,13 +222,18 @@ class Biomorph(object):
         dy[0] = dy[4]
         dy[1] = dy[3]
         dy[7] = dy[5]
-        return order, dx, dy
+
+        color[0] = abs(gene[10]) % 256
+        color[1] = abs(gene[11]) % 256
+        color[2] = abs(gene[12]) % 256
+        return order, dx, dy, color
 
 
 class Segment(object):
     _cache = []
 
     def __init__(self):
+        self.colors = self.get_list() #
         self.x1 = self.get_list()
         self.y1 = self.get_list()
         self.x2 = self.get_list()
@@ -226,11 +244,12 @@ class Segment(object):
         self.ymin = 0
         self.ymax = 0
 
-    def add(self, x1, y1, x2, y2):
+    def add(self, x1, y1, x2, y2, color):
         self.x1[self.idx] = x1
         self.y1[self.idx] = y1
         self.x2[self.idx] = x2
         self.y2[self.idx] = y2
+        self.colors[self.idx] = Color(color[0], color[1], color[2])
         self.idx += 1
         return None
 
@@ -239,32 +258,32 @@ class Segment(object):
         self.xmax = max(self.x2)
         self.ymin = min(self.y2)
         self.ymax = max(self.y2)
-        return self.xmax-self.xmin, self.ymax-self.ymin
+        return self.xmax - self.xmin, self.ymax - self.ymin
 
     def transform(self, size, pos):
         width, height = self.dim()
-        maxsize = max(width,height)
+        maxsize = max(width, height)
         _size = size - 6
         if _size > maxsize:
             adj = 1
         else:
-            adj = maxsize/_size
-        mid = _size//2
-        xmin = self.xmin//adj
-        xmax = self.xmax//adj
-        ymin = self.ymin//adj
-        ymax = self.ymax//adj
-        w = xmax-xmin
-        h = ymax-ymin
-        x = pos[0] - xmin - (w//2) - 1
-        y = pos[1] - ymin - (h//2) - 1
+            adj = maxsize / _size
+        mid = _size // 2
+        xmin = self.xmin // adj
+        xmax = self.xmax // adj
+        ymin = self.ymin // adj
+        ymax = self.ymax // adj
+        w = xmax - xmin
+        h = ymax - ymin
+        x = pos[0] - xmin - (w // 2) - 1
+        y = pos[1] - ymin - (h // 2) - 1
         return x, y, adj
 
     def get_list(self):
         if len(self._cache) > 0:
             return self._cache.pop()
         else:
-            return [0 for i in range(2**(gene['ln'][1]+1))]
+            return [0 for i in range(2 ** (gene['ln'][1] + 1))]
 
     def deinit(self):
         for i in range(self.idx):
@@ -294,7 +313,7 @@ def run():
 def main():
     global app, matrix, control
     config = Config()
-    config.setup(size*col,size*row)
+    config.setup(size * col, size * row)
     matrix = Matrix()
     control = Control(matrix)
     matrix.control = control
@@ -304,4 +323,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
