@@ -3,8 +3,9 @@
 A fork of the original biomorph-evolve by jggatc with additional features.
 
 ## Dependencies
-* Python 2.7+ (https://www.python.org/)
-* Pygame 1.9+ (https://www.pygame.org/)
+* [Python 2.7+](https://www.python.org/)
+* [Pygame 1.9+](https://www.pygame.org/)
+* [Numpy](https://numpy.org/)
 
 ## Inspiration
 Biomorph Evolve is an implementation of Richard Dawkins' Blind Watchmaker Algorithm, based on his article The Evolution of Evolvability in Artificial Life, SFI Studies in the Sciences of Complexity, 1988.
@@ -12,6 +13,7 @@ Biomorph Evolve is an implementation of Richard Dawkins' Blind Watchmaker Algori
 ## Changes to original
 * Added colors
 * Added assymetrical figures by making modifier constants an evolvable characteristic
+* Added a different number of splits to different branches
 
 ## License
 Released under the [GPL3 license](http://www.gnu.org/licenses/gpl.html).
