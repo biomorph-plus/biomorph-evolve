@@ -25,6 +25,7 @@ Download Site: https://gatc.ca
 from __future__ import division
 # __pragma__ ('noskip')
 import random
+import numpy as np
 from control import App, Control, Config, DictCache, ListCache, RectCache, Renderer, Color
 
 if not hasattr(random, 'randrange'):
@@ -33,13 +34,14 @@ if not hasattr(random, 'randrange'):
 size = 200
 col = 3
 row = 3
-gene = {'num': 8, 'lv': (-9, 9), 'ln': (3, 9), 'cl': (0, 256), 'jmp': (1, 4)}
+gene = {'num': 9, 'lv': (-9, 9), 'ln': (1, 10), 'cl': (0, 256), 'jmp': (1, 4)}
 genome = dict([(i, gene['lv']) for i in range(1, gene['num'] + 1)])
-genome[9] = gene['ln']
 for i in range(10, 13):
     genome[i] = gene['cl']
 for i in range(13, 18):
     genome[i] = gene['jmp']
+for i in range(18, 25):
+    genome[i] = gene['ln']
 biomorph_color = Color(40, 60, 80)
 screen_color = Color(150, 150, 150)
 grid_color = Color(0, 20, 40)
@@ -56,13 +58,14 @@ class Matrix(object):
         self.biomorph = []
         self.processing = None
         self.reset = False
-        self.dx = [0 for i in range(8)]
-        self.dy = [0 for i in range(8)]
+        self.dx = [0 for _ in range(9)]
+        self.dy = [0 for _ in range(9)]
         self.repeat = False
         self.control = None
         self.size = size
         self.color = [0 for _ in range(3)]
         self.jmp = [0 for _ in range(5)]
+        self.ln = np.array([0 for _ in range(7)])
         self.screen_color = screen_color
         self.grid_color = grid_color
         self.renderer = Renderer(self)
@@ -99,7 +102,7 @@ class Matrix(object):
         startx = 0
         starty = 0
         startdir = 2
-        biomorph.develop(startx, starty, startdir, self.dx, self.dy, self.color, self.jmp)
+        biomorph.develop(startx, starty, startdir, self.dx, self.dy, self.color, self.jmp, self.ln)
 
     def display(self, biomorph, pos):
         self.renderer.render(biomorph, pos)
@@ -159,7 +162,7 @@ class Biomorph(object):
             for i in genes.keys():
                 self.genes[i] = genes[i]
             i = random.choice(list(self.genes.keys()))
-            if i < 9 or i >= 13:
+            if i < 10 or i >= 13:
                 self.genes[i] += random.choice([-1, 1])
             else:
                 self.genes[i] += random.randrange(0, 256)
@@ -169,12 +172,12 @@ class Biomorph(object):
             elif self.genes[i] > genome[i][1]:
                 self.genes[i] = genome[i][1] - 1
         else:
-            for i in range(1, 9):
+            for i in range(1, 10):
                 self.genes[i] = random.randrange(genome[i][0], genome[i][1] + 1)
             self.genes[9] = random.randrange(genome[i][1] - 3, genome[i][1] + 1)
             for i in range(10, 13):
                 self.genes[i] = random.randrange(genome[i][0], genome[i][1])
-            for i in range(13, 18):
+            for i in range(13, 25):
                 self.genes[i] = random.randrange(genome[i][0], genome[i][1] + 1)
         self.segments = None
         self.rect = rect_cache.get(0, 0, size, size)
@@ -188,23 +191,27 @@ class Biomorph(object):
     def reproduce(self):
         return Biomorph(self.genes)
 
-    def develop(self, startx, starty, startdir, dx, dy, color, jmp):
+    def develop(self, startx, starty, startdir, dx, dy, color, jmp, len):
         self.segments = Segment()
-        order, dx, dy, color, jmp = self.plugin(self.genes, dx, dy, color, jmp)
-        self.tree(startx, starty, order, startdir, dx, dy, color, jmp, 2)
+        len, dx, dy, color, jmp = self.plugin(self.genes, dx, dy, color, jmp, len)
+        self.tree(startx, starty, len, 4, startdir, dx, dy, color, jmp, 2)
 
-    def tree(self, x, y, length, dir, dx, dy, color, jmp, jmp_p):
+    def tree(self, x, y, len, len_p, dir, dx, dy, color, jmp, jmp_p):
+        if len_p < 0:
+            len_p = 6
+        if len_p > 6:
+            len_p = 0
         _dir = dir % 8
-        xnew = x + length * dx[_dir]
-        ynew = y + length * dy[_dir]
+        xnew = x + len[len_p] * dx[_dir]
+        ynew = y + len[len_p] * dy[_dir]
         self.segments.add(x, y, xnew, ynew, color)
         if jmp_p < 0:
             jmp_p = 4
         if jmp_p > 4:
             jmp_p = 0
-        if length > 0:
-            self.tree(xnew, ynew, length - 1, _dir + jmp[jmp_p], dx, dy, self.rotate_color(color, True), jmp, jmp_p + 1)
-            self.tree(xnew, ynew, length - 1, _dir + jmp[jmp_p], dx, dy, self.rotate_color(color, False), jmp, jmp_p - 1)
+        if len[len_p] > 0:
+            self.tree(xnew, ynew, len - 1, len_p - 1, _dir + jmp[jmp_p], dx, dy, self.rotate_color(color, True), jmp, jmp_p + 1)
+            self.tree(xnew, ynew, len - 1, len_p + 1, _dir + jmp[jmp_p], dx, dy, self.rotate_color(color, False), jmp, jmp_p - 1)
 
     def rotate_color(self, color, sense):
         if sense:
@@ -212,8 +219,7 @@ class Biomorph(object):
         else:
             return [color[1], color[2], color[0]]
 
-    def plugin(self, gene, dx, dy, color, jmp):
-        order = gene[9]
+    def plugin(self, gene, dx, dy, color, jmp, len):
         dx[3] = gene[1]
         dx[4] = gene[2]
         dx[5] = gene[3]
@@ -241,7 +247,15 @@ class Biomorph(object):
         jmp[3] = gene[16]
         jmp[4] = gene[17]
 
-        return order, dx, dy, color, jmp
+        len[0] = gene[18]
+        len[1] = gene[19]
+        len[2] = gene[20]
+        len[3] = gene[21]
+        len[4] = gene[22]
+        len[5] = gene[23]
+        len[6] = gene[24]
+
+        return len, dx, dy, color, jmp
 
 
 class Segment(object):
