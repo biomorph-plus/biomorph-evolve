@@ -14,6 +14,7 @@ Biomorph Evolve is an implementation of Richard Dawkins' Blind Watchmaker Algori
 * Added colors
 * Added assymetrical figures by making modifier constants an evolvable characteristic
 * Added a different number of splits to different branches
+* `Gene` now directly influences the construction of the genome
 
 ## License
 Released under the [GPL3 license](http://www.gnu.org/licenses/gpl.html).
