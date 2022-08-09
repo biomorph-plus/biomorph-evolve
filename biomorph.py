@@ -34,7 +34,13 @@ if not hasattr(random, 'randrange'):
 size = 200
 col = 3
 row = 3
-gene = {'lv': {'num': 18, 'r': (-9, 9)}, 'cl': {'num': 3, 'r': (0, 256)}, 'jmp': {'num': 5, 'r': (1, 4)}, 'ln': {'num': 7, 'r': (1, 12)}}
+gene = {
+    'lv': {'num': 18, 'r': (-12, 12)},
+    'cl': {'num': 3, 'r': (0, 256)},
+    'jmp': {'num': 6, 'r': (1, 9)},
+    'ln': {'num': 5, 'r': (1, 5)},
+    'fk': {'num': 4, 'r': (1, 5)}
+}
 num = gene['lv']['num'] + 1
 genome = dict([(i, gene['lv']['r']) for i in range(1, num)])
 for i in range(num, num + gene['cl']['num']):
@@ -45,6 +51,9 @@ for i in range(num, num + gene['jmp']['num']):
 num += gene['jmp']['num']
 for i in range(num, num + gene['ln']['num']):
     genome[i] = gene['ln']['r']
+num += gene['ln']['num']
+for i in range(num, num + gene['fk']['num']):
+    genome[i] = gene['fk']['r']
 screen_color = Color(150, 150, 150)
 grid_color = Color(0, 20, 40)
 dict_cache = DictCache()
@@ -60,14 +69,15 @@ class Matrix(object):
         self.biomorph = []
         self.processing = None
         self.reset = False
-        self.dx = [0 for _ in range(int(gene['lv']['num'] / 2))]
-        self.dy = [0 for _ in range(int(gene['lv']['num'] / 2))]
+        self.dx = np.zeros(gene['lv']['num'] // 2)
+        self.dy = np.zeros(gene['lv']['num'] // 2)
         self.repeat = False
         self.control = None
         self.size = size
         self.color = [0 for _ in range(gene['cl']['num'])]
         self.jmp = [0 for _ in range(gene['jmp']['num'])]
         self.ln = np.zeros(gene['ln']['num'])
+        self.fk = [0 for _ in range(gene['fk']['num'])]
         self.screen_color = screen_color
         self.grid_color = grid_color
         self.renderer = Renderer(self)
@@ -104,7 +114,7 @@ class Matrix(object):
         startx = 0
         starty = 0
         startdir = 2
-        biomorph.develop(startx, starty, startdir, self.dx, self.dy, self.color, self.jmp, self.ln)
+        biomorph.develop(startx, starty, startdir, self.dx, self.dy, self.color, self.jmp, self.ln, self.fk)
 
     def display(self, biomorph, pos):
         self.renderer.render(biomorph, pos)
@@ -186,7 +196,11 @@ class Biomorph(object):
             num_ += gene['jmp']['num']
             for i in range(num_, num_ + gene['ln']['num']):
                 self.genes[i] = random.randrange(genome[i][0], genome[i][1] + 1)
+            num_ += gene['ln']['num']
+            for i in range(num_, num_ + gene['fk']['num']):
+                self.genes[i] = random.randrange(genome[i][0], genome[i][1] + 1)
         self.segments = None
+        self.idx = 0
         self.rect = rect_cache.get(0, 0, size, size)
         self.dim = size
 
@@ -198,17 +212,22 @@ class Biomorph(object):
     def reproduce(self):
         return Biomorph(self.genes)
 
-    def develop(self, startx, starty, startdir, dx, dy, color, jmp, len):
-        self.segments = Segment()
-        len, dx, dy, color, jmp = self.plugin(dx, dy, color, jmp, len)
-        self.tree(startx, starty, len, 4, startdir, dx, dy, color, jmp, 2)
+    def develop(self, startx, starty, startdir, dx, dy, color, jmp, len, fk):
+        len, dx, dy, color, jmp, fk = self.plugin(dx, dy, color, jmp, len, fk)
+        self.pretree(len, 0, startdir, jmp, 0, fk, 0)
+        self.segments = Segment(self.idx)
+        self.tree(startx, starty, len, 0, startdir, dx, dy, color, jmp, 0, fk, 0)
 
-    def tree(self, x, y, len, len_p, dir, dx, dy, color, jmp, jmp_p):
+    def tree(self, x, y, len, len_p, dir, dx, dy, color, jmp, jmp_p, fk, fk_p):
         if len_p < 0:
             len_p = gene['ln']['num']
         if len_p >= gene['ln']['num']:
             len_p = 0
-        _dir = dir % int(gene['lv']['num'] / 2)
+        if fk_p < 0:
+            fk_p = gene['fk']['num']
+        if fk_p >= gene['fk']['num']:
+            fk_p = 0
+        _dir = dir % gene['lv']['num'] // 2
         xnew = x + len[len_p] * dx[_dir]
         ynew = y + len[len_p] * dy[_dir]
         self.segments.add(x, y, xnew, ynew, color)
@@ -217,16 +236,43 @@ class Biomorph(object):
         if jmp_p >= gene['jmp']['num']:
             jmp_p = 0
         if len[len_p] > 0:
-            self.tree(xnew, ynew, len - 1, len_p - 1, _dir + jmp[jmp_p], dx, dy, self.rotate_color(color, True), jmp, jmp_p + 1)
-            self.tree(xnew, ynew, len - 1, len_p + 1, _dir + jmp[jmp_p], dx, dy, self.rotate_color(color, False), jmp, jmp_p - 1)
+            for i in range(fk[fk_p]):
+                i_ = i - fk[fk_p] // 2
+                self.tree(xnew, ynew, len - 1, len_p + i_, _dir + jmp[jmp_p], dx, dy, self.rotate_color(color, i_), jmp, jmp_p + i_, fk, fk_p + i_)
+
+    def pretree(self, len, len_p, dir, jmp, jmp_p, fk, fk_p):
+        self.idx += 1
+        if len_p < 0:
+            len_p = gene['ln']['num']
+        if len_p >= gene['ln']['num']:
+            len_p = 0
+        if fk_p < 0:
+            fk_p = gene['fk']['num']
+        if fk_p >= gene['fk']['num']:
+            fk_p = 0
+        _dir = dir % gene['lv']['num'] // 2
+        if jmp_p < 0:
+            jmp_p = gene['jmp']['num']
+        if jmp_p >= gene['jmp']['num']:
+            jmp_p = 0
+        if len[len_p] > 0:
+            for i in range(fk[fk_p]):
+                i_ = i - fk[fk_p] // 2
+                self.pretree(len - 1, len_p + i_, _dir + jmp[jmp_p], jmp, jmp_p + i_, fk, fk_p + i_)
 
     def rotate_color(self, color, sense):
-        if sense:
-            return [color[2], color[0], color[1]]
+        color_ = [0, 0, 0]
+        if sense < 0:
+            for _ in range(-sense):
+                color_ = [color[2], color[0], color[1]]
+                color = color_
         else:
-            return [color[1], color[2], color[0]]
+            for _ in range(sense):
+                color_ = [color[1], color[2], color[0]]
+                color = color_
+        return color
 
-    def plugin(self, dx, dy, color, jmp, len):
+    def plugin(self, dx, dy, color, jmp, len, fk):
         num_ = 1
         for i in range(int(gene['lv']['num'] / 2)):
             dy[i] = self.genes[num_ + i]
@@ -246,15 +292,19 @@ class Biomorph(object):
         num_ += gene['jmp']['num']
         for i in range(gene['ln']['num']):
             len[i] = self.genes[num_ + i]
+        num_ += gene['ln']['num']
+        for i in range(gene['fk']['num']):
+            fk[i] = self.genes[num_ + i]
 
-        return len, dx, dy, color, jmp
+        return len, dx, dy, color, jmp, fk
 
 
 class Segment(object):
     _cache = []
 
-    def __init__(self):
-        self.colors = self.get_list() #
+    def __init__(self, midx):
+        self.midx = midx
+        self.colors = self.get_list()
         self.x1 = self.get_list()
         self.y1 = self.get_list()
         self.x2 = self.get_list()
@@ -304,7 +354,7 @@ class Segment(object):
         if len(self._cache) > 0:
             return self._cache.pop()
         else:
-            return [0 for i in range(2 ** (gene['ln']['r'][1] + 1))]
+            return [0 for _ in range(self.midx)]
 
     def deinit(self):
         for i in range(self.idx):
