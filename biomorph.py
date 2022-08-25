@@ -35,10 +35,10 @@ size = 200
 col = 3
 row = 3
 gene = {
-    'lv': {'num': 18, 'r': (-12, 12)},
+    'lv': {'num': 16, 'r': (-24, 24)},
     'cl': {'num': 3, 'r': (0, 256)},
-    'jmp': {'num': 6, 'r': (1, 9)},
-    'ln': {'num': 5, 'r': (1, 5)},
+    'jmp': {'num': 8, 'r': (1, 8)},
+    'ln': {'num': 8, 'r': (3, 7)},
     'fk': {'num': 4, 'r': (1, 5)}
 }
 num = gene['lv']['num'] + 1
@@ -238,7 +238,7 @@ class Biomorph(object):
         if len[len_p] > 0:
             for i in range(fk[fk_p]):
                 i_ = i - fk[fk_p] // 2
-                self.tree(xnew, ynew, len - 1, len_p + i_, _dir + jmp[jmp_p], dx, dy, self.rotate_color(color, i_), jmp, jmp_p + i_, fk, fk_p + i_)
+                self.tree(xnew, ynew, len - 1, len_p + i_, _dir + jmp[jmp_p], dx + i_, dy + i_, self.rotate_color(color, i_), jmp, jmp_p + i_, fk, fk_p + i_)
 
     def pretree(self, len, len_p, dir, jmp, jmp_p, fk, fk_p):
         self.idx += 1
