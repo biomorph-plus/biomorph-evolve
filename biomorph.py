@@ -149,6 +149,8 @@ class Matrix(object):
                 self.reset = True
                 self.processing = 0
                 self.biomorph = self.reproduce(self.biomorph_selected)
+                for biomorph in self.biomorph:
+                    self.develop(biomorph)
             else:
                 if self.processing < (row * col):
                     biomorph = self.biomorph[self.processing]
@@ -238,7 +240,14 @@ class Biomorph(object):
         if len[len_p] > 0:
             for i in range(fk[fk_p]):
                 i_ = i - fk[fk_p] // 2
-                self.tree(xnew, ynew, len - 1, len_p + i_, _dir + jmp[jmp_p], dx + i_, dy + i_, self.rotate_color(color, i_), jmp, jmp_p + i_, fk, fk_p + i_)
+                self.tree(
+                    xnew, ynew,
+                    len - 1, len_p + i_,
+                    _dir + jmp[jmp_p], dx + i_, dy + i_,
+                    self.rotate_color(color, i_),
+                    jmp, jmp_p + i_,
+                    fk, fk_p + i_
+                )
 
     def pretree(self, len, len_p, dir, jmp, jmp_p, fk, fk_p):
         self.idx += 1
