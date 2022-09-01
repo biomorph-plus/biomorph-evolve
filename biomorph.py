@@ -243,8 +243,9 @@ class Biomorph(object):
                 self.tree(
                     xnew, ynew,
                     len - 1, len_p + i_,
-                    _dir + jmp[jmp_p], dx + i_, dy + i_,
-                    self.rotate_color(color, i_),
+                    _dir + jmp[jmp_p],
+                    self.rotate(dx, i_), self.rotate(dy, i_),
+                    self.rotate(color, i_),
                     jmp, jmp_p + i_,
                     fk, fk_p + i_
                 )
@@ -269,17 +270,9 @@ class Biomorph(object):
                 i_ = i - fk[fk_p] // 2
                 self.pretree(len - 1, len_p + i_, _dir + jmp[jmp_p], jmp, jmp_p + i_, fk, fk_p + i_)
 
-    def rotate_color(self, color, sense):
-        color_ = [0, 0, 0]
-        if sense < 0:
-            for _ in range(-sense):
-                color_ = [color[2], color[0], color[1]]
-                color = color_
-        else:
-            for _ in range(sense):
-                color_ = [color[1], color[2], color[0]]
-                color = color_
-        return color
+    def rotate(self, list, sense):
+        return [list[(i + sense) % len(list)] for i, x in enumerate(list)]
+
 
     def plugin(self, dx, dy, color, jmp, len, fk):
         num_ = 1
