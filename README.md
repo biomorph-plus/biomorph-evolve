@@ -2,7 +2,7 @@
 ---
 A fork of the original biomorph-evolve by jggatc with additional features.
 
-Available on: [replit](https://replit.com/@Grigory9898/biomorph-evolve-fork?v=1)
+Available on: [replit](https://replit.com/@Grigory9898/biomorph-evolve-fork?v=1) (not updated)
 
 ## Dependencies
 * [Python 2.7+](https://www.python.org/)
