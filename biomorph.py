@@ -3,16 +3,20 @@
 """
 Biomorph Evolve - Implementation of Dawkins' Blind Watchmaker Algorithm
 Copyright (C) 2017 James Garnon
+
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 Biomorph Evolve version 1.1
 Download Site: https://gatc.ca
 """
@@ -21,74 +25,8 @@ Download Site: https://gatc.ca
 from __future__ import division
 # __pragma__ ('noskip')
 import random
-import time
-import threading
-import tkinter as tk
-import tkinter.ttk as ttk
 import numpy as np
 from control import App, Control, Config, DictCache, ListCache, RectCache, Renderer, Color
-
-def intrust1():
-  time.sleep(3)
-  print("1-")
-  print("Click on one of the 9 windows to evolve all the Biomorphs ")
-  print()
-
-def intrust2():
-  time.sleep(4)
-  print("2-")
-  print("You can do it infinite times, once you are done, stop the program")
-  print()
-
-def intrust3():
-  time.sleep(5)
-  print("3-")
-  print("After that you can see the time for how much your Biomorphs have evolved in the console window and the evolved Biomorphs")
-  print()
-
-if __name__ == '__main__':
-  x = threading.Thread(target = intrust1, args = ())
-  y = threading.Thread(target = intrust2, args = ())
-  z = threading.Thread(target = intrust3, args = ())
-  
-  x.start()
-  y.start()
-  z.start()
-
-def start():
-  loading=100
-  load=0
-  speed=1
-  while(load < loading):
-    time.sleep(0.08)
-    bar["value"]+=(speed/loading)*100
-    load+=speed
-    percent.set(str((load/loading)*100)+"%")
-    text.set(str(load)+"/"+str(loading) +"loading completed")
-    window.update_idletasks()
-  window.destroy()
-
-window = tk.Tk()
-
-window.geometry("420x420")
-window.title("Biomorph")
-window.config(background = "black")
-label = tk.Label(window, text="New Biomorph", font=("Arial", 18, "bold"), fg="white", bg="black", padx=3, pady=3, compound="bottom").pack()
-
-percent = tk.StringVar()
-text = tk.StringVar()
-  
-percent1=tk.Label(window, textvariable=percent)
-percent1.pack()
-text1=tk.Label(window, textvariable=text)
-text1.pack()
-  
-bar = ttk.Progressbar(window, length=300)
-bar.pack(pady=10) 
-
-button = tk.Button(window, text="start game", command=start, font=("Arial", 10, "bold"), fg="black", bg="light blue", activeforeground="black", activebackground="light blue", compound="bottom", anchor="center").pack() 
-
-window.mainloop()
 
 if not hasattr(random, 'randrange'):
     random.randrange = lambda i, f: random.choice(range(i, f))
@@ -116,7 +54,7 @@ for i in range(num, num + gene['ln']['num']):
 num += gene['ln']['num']
 for i in range(num, num + gene['fk']['num']):
     genome[i] = gene['fk']['r']
-screen_color = Color(0)
+screen_color = Color(150, 150, 150)
 grid_color = Color(0, 20, 40)
 dict_cache = DictCache()
 list_cache = ListCache()
@@ -126,7 +64,6 @@ rect_cache = RectCache()
 class Matrix(object):
 
     def __init__(self):
-        self.count = 0
         self.biomorph_selected = None
         self.pos_select = None
         self.biomorph = []
@@ -171,8 +108,6 @@ class Matrix(object):
         for i in range((row * col) - 1):
             self.biomorph.append(biomorph.reproduce())
         self.biomorph.insert(4, biomorph)
-        self.count += 1
-        print("evolved for:", str(self.count), "generation(s)") 
         return self.biomorph
 
     def develop(self, biomorph):
@@ -458,9 +393,6 @@ def main():
     app = App(run)
     app.run()
 
-if __name__ == "__main__":
-  main()
-  x.join()
-  y.join()
-  z.join()
-  K.join() 
+
+if __name__ == '__main__':
+    main()
