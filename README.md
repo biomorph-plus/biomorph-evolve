@@ -23,4 +23,4 @@ Biomorph Evolve is an implementation of Richard Dawkins' Blind Watchmaker Algori
 Released under the [GPL3 license](http://www.gnu.org/licenses/gpl.html).
 
 ## Collaborators
-MarinOctavian (Ok-src), ScratchX98, Leo007er1, Alpha994
+OctavianMarin (Ok-src), ScratchX98, Leo007er1, Alpha994
